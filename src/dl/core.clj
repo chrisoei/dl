@@ -8,7 +8,7 @@
 ;(import '(org.apache.httpcomponents/httpclient HttpClients HttpGet))
 ;(import '(org.apache.httpcomponents/httpcore ContentType EntityUtils))
 (require '[clj-http.client :as client])
-
+(require '[clojure.java.io :refer [file output-stream]])
 (require '[clojure.java.jdbc :as jdbc])
 
 (def db {
@@ -35,11 +35,36 @@
     })
 )
 
+(defn- write-result [cmd result]
+  (with-open [out (output-stream (file (.getOptionValue cmd "extract")))]
+    (.write out (:content (first result)))
+  )
+)
+
+(defn extract [cmd]
+  (write-result
+    cmd
+    (cond
+      (.hasOption cmd "uri")
+        (jdbc/query
+          db
+          ["SELECT content FROM dl WHERE uri = ?" (.getOptionValue cmd "uri")]
+        )
+      (.hasOption cmd "referrer")
+        (jdbc/query
+          db
+          ["SELECT content FROM dl WHERE referrer = ?" (.getOptionValue cmd "referrer")]
+        )
+    )
+  )
+)
+
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
   (let [
        options (doto (Options.)
+                  (.addOption "extract" true "Extract to file")
                   (.addOption "referrer" true "Referring web page")
                   (.addOption "uri" true "URI to download")
                   (.addOption "comment" true "Comment")
@@ -49,15 +74,19 @@
        parser (GnuParser.)
        cmd (.parse parser options argv)
      ]
-    (insert cmd
-            (client/get (.getOptionValue cmd "uri") {
-                     :as :byte-array
-                     :headers {
-                       :referer (.getOptionValue cmd "referrer")
-                       :user-agent "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.101 Safari/537.36"
-                     }
-                     :save-request? true
-             })
+    (if (.hasOption cmd "extract")
+      (extract cmd)
+    ;else
+      (insert cmd
+              (client/get (.getOptionValue cmd "uri") {
+                       :as :byte-array
+                       :headers {
+                         :referer (.getOptionValue cmd "referrer")
+                         :user-agent "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.101 Safari/537.36"
+                       }
+                       :save-request? true
+               })
+      )
     )
   )
 )
