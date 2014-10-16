@@ -82,7 +82,7 @@
                        :as :byte-array
                        :headers {
                          :referer (.getOptionValue cmd "referrer")
-                         :user-agent "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.101 Safari/537.36"
+                         :user-agent (System/getenv "OEI_USER_AGENT")
                        }
                        :save-request? true
                })
