@@ -71,6 +71,7 @@
        parser (GnuParser.)
        cmd (.parse parser options argv)
      ]
+    (assert (empty? (.getArgList cmd)))
     (if (.hasOption cmd "extract")
       (extract cmd)
     ;else
