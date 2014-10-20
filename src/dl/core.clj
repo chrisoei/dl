@@ -14,22 +14,25 @@
         })
 
 (defn insert [cmd r]
-  (jdbc/insert! db :dl
-    {
-      :uri (get-in r [:request :http-url])
-      :referrer (get-in r [:request :headers "Referer"])
-      :status (:status r)
-      :content_type (get-in r [:headers "Content-Type"])
-      :encoding (get-in r [:headers "Content-Encoding"])
-      :sha2_256 (DigestUtils/sha256Hex (:body r))
-      :sha1 (DigestUtils/sha1Hex (:body r))
-      :md5 (DigestUtils/md5Hex (:body r))
-      :crc32 (format "%08x" (.getValue (doto (CRC32.) (.update (:body r)))))
-      :content (:body r)
-      :comment (.getOptionValue cmd "comment")
-      :j (.getOptionValue cmd "json")
-      :l (count (:body r))
-    })
+  (let [body (:body r)]
+    (jdbc/insert! db :dl
+      {
+        :uri (get-in r [:request :http-url])
+        :referrer (get-in r [:request :headers "Referer"])
+        :status (:status r)
+        :content_type (get-in r [:headers "Content-Type"])
+        :encoding (get-in r [:headers "Content-Encoding"])
+        :sha2_256 (DigestUtils/sha256Hex body)
+        :sha1 (DigestUtils/sha1Hex body)
+        :md5 (DigestUtils/md5Hex body)
+        :crc32 (format "%08x" (.getValue (doto (CRC32.) (.update body))))
+        :content body
+        :comment (.getOptionValue cmd "comment")
+        :j (.getOptionValue cmd "json")
+        :l (count body)
+      }
+    )
+  )
 )
 
 (defn- write-result [cmd result]
