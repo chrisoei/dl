@@ -14,7 +14,13 @@
         })
 
 (defn insert [cmd r]
-  (let [body (:body r)]
+  (let [body (:body r)
+        sha2_256 (future (DigestUtils/sha256Hex body))
+        sha1 (future (DigestUtils/sha1Hex body))
+        md5 (future (DigestUtils/md5Hex body))
+        crc32 (future (format "%08x" (.getValue (doto (CRC32.) (.update body)))))
+        l (future (count body))
+        ]
     (jdbc/insert! db :dl
       {
         :uri (get-in r [:request :http-url])
@@ -22,14 +28,14 @@
         :status (:status r)
         :content_type (get-in r [:headers "Content-Type"])
         :encoding (get-in r [:headers "Content-Encoding"])
-        :sha2_256 (DigestUtils/sha256Hex body)
-        :sha1 (DigestUtils/sha1Hex body)
-        :md5 (DigestUtils/md5Hex body)
-        :crc32 (format "%08x" (.getValue (doto (CRC32.) (.update body))))
+        :sha2_256 (deref sha2_256)
+        :sha1 (deref sha1)
+        :md5 (deref md5)
+        :crc32 (deref crc32)
         :content body
         :comment (.getOptionValue cmd "comment")
         :j (.getOptionValue cmd "json")
-        :l (count body)
+        :l (deref l)
       }
     )
   )
