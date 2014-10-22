@@ -10,7 +10,7 @@
                   [commons-codec/commons-codec "1.9"]
                   [commons-io/commons-io "2.4"]
                   [org.clojure/java.jdbc "0.3.5"]
-                  [org.xerial/sqlite-jdbc "3.8.6"]
+                  [org.xerial/sqlite-jdbc "3.8.7"]
                 ]
   :main ^:skip-aot dl.core
   :target-path "target/%s"
