@@ -1,9 +1,12 @@
 (ns dl.core
   (:gen-class))
 
+(import '(java.io File))
 (import '(java.util.zip CRC32))
 (import '(org.apache.commons.cli GnuParser Options))
 (import '(org.apache.commons.codec.digest DigestUtils))
+(import '(org.apache.commons.io FileUtils))
+
 (require '[clj-http.client :as client])
 (require '[clojure.java.io :refer [file output-stream]])
 (require '[clojure.java.jdbc :as jdbc])
@@ -72,6 +75,7 @@
   (let [
        options (doto (Options.)
                   (.addOption "extract" true "Extract to file")
+                  (.addOption "import" true "Import from a file")
                   (.addOption "referrer" true "Referring web page")
                   (.addOption "uri" true "URI to download")
                   (.addOption "comment" true "Comment")
@@ -86,14 +90,26 @@
       (extract cmd)
     ;else
       (insert cmd
-              (client/get (.getOptionValue cmd "uri") {
-                       :as :byte-array
-                       :headers {
-                         :referer (.getOptionValue cmd "referrer")
-                         :user-agent (System/getenv "OEI_USER_AGENT")
-                       }
-                       :save-request? true
-               })
+        (if (.hasOption cmd "import")
+          ; simulate request
+          {
+            :body (FileUtils/readFileToByteArray (File. (.getOptionValue cmd "import")))
+            :request {
+              :http-url (.getOptionValue cmd "uri")
+              :headers { "Referer" (.getOptionValue cmd "referrer") }
+            }
+          }
+          ; else
+          (client/get (.getOptionValue cmd "uri") {
+            :as :byte-array
+            :headers {
+             :referer (.getOptionValue cmd "referrer")
+             :user-agent (System/getenv "OEI_USER_AGENT")
+            }
+            :save-request? true
+          })
+        )
+
       )
     )
   )

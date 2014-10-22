@@ -1,4 +1,4 @@
-(defproject dl "0.1.4"
+(defproject dl "0.2.3"
   :description "Download manager"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
@@ -8,6 +8,7 @@
                   [clj-http "1.0.0"]
                   [commons-cli/commons-cli "1.2"]
                   [commons-codec/commons-codec "1.9"]
+                  [commons-io/commons-io "2.4"]
                   [org.clojure/java.jdbc "0.3.5"]
                   [org.xerial/sqlite-jdbc "3.8.6"]
                 ]
