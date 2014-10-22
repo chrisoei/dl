@@ -38,6 +38,7 @@
         :l (deref l)
       }
     )
+    (shutdown-agents)
   )
 )
 
