@@ -55,6 +55,11 @@
   (write-result
     cmd
     (cond
+      (.hasOption cmd "sha256")
+        (jdbc/query
+          db
+          ["SELECT content FROM dl WHERE sha2_256 = ?" (.getOptionValue cmd "sha256")]
+        )
       (.hasOption cmd "uri")
         (jdbc/query
           db
@@ -78,6 +83,7 @@
                   (.addOption "import" true "Import from a file")
                   (.addOption "referrer" true "Referring web page")
                   (.addOption "uri" true "URI to download")
+                  (.addOption "sha256" true "SHA-2 (256-bit) hash of file to extract")
                   (.addOption "comment" true "Comment")
                   (.addOption "json" true "Additional JSON")
                 )
