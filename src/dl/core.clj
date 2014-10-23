@@ -26,7 +26,7 @@
       (let [
            recs (jdbc/query
                   db
-                  ["SELECT uri, sha2_256, sha1, md5, crc32, l, content FROM dl where uri = ?;"
+                  ["SELECT uri, sha2_256, sha3_256, sha1, md5, crc32, l, content FROM dl where uri = ?;"
                     (:uri u)]
                 )
            row (first recs)
@@ -35,14 +35,16 @@
           ]
         (println (:uri row))
         (assert (= (deref (:sha2_256 h)) (:sha2_256 row)))
-        (when (not (and (= (deref (:md5 h))(:md5 row))
+        (when (not (and (= (deref (:sha3_256 h)) (:sha3_256 row))
+                        (= (deref (:md5 h)) (:md5 row))
                         (= (deref (:sha1 h)) (:sha1 row))
                         (= (deref (:crc32 h)) (:crc32 row))
                         (= (deref (:l h)) (:l row))
                    ))
           (jdbc/execute!
             db
-            ["UPDATE dl SET md5=?, sha1=?, crc32=?, l=? WHERE uri = ?"
+            ["UPDATE dl SET sha3_256=?, md5=?, sha1=?, crc32=?, l=? WHERE uri = ?"
+               (deref (:sha3_256 h))
                (deref (:md5 h))
                (deref (:sha1 h))
                (deref (:crc32 h))
@@ -69,6 +71,7 @@
         :content_type (get-in r [:headers "Content-Type"])
         :encoding (get-in r [:headers "Content-Encoding"])
         :sha2_256 (deref (:sha2_256 h))
+        :sha3_256 (deref (:sha3_256 h))
         :sha1 (deref (:sha1 h))
         :md5 (deref (:md5 h))
         :crc32 (deref (:crc32 h))
