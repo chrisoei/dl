@@ -2,27 +2,64 @@
   (:gen-class))
 
 (import '(java.io File))
-(import '(java.util.zip CRC32))
 (import '(org.apache.commons.cli GnuParser Options))
-(import '(org.apache.commons.codec.digest DigestUtils))
 (import '(org.apache.commons.io FileUtils))
 
 (require '[clj-http.client :as client])
 (require '[clojure.java.io :refer [file output-stream]])
 (require '[clojure.java.jdbc :as jdbc])
+(require '[dl.hash :as hash])
 
 (def db {
           :subprotocol "sqlite"
           :subname (System/getenv "OEI_DL")
         })
 
+(defn fsck
+  [cmd]
+  (let [uris (jdbc/query
+            db
+            ["SELECT uri FROM dl;"]
+          )
+       ]
+    (doseq [u uris]
+      (let [
+           recs (jdbc/query
+                  db
+                  ["SELECT uri, sha2_256, sha1, md5, crc32, l, content FROM dl where uri = ?;"
+                    (:uri u)]
+                )
+           row (first recs)
+           content (:content row)
+           h (hash/multi content)
+          ]
+        (println (:uri row))
+        (assert (= (deref (:sha2_256 h)) (:sha2_256 row)))
+        (when (not (and (= (deref (:md5 h))(:md5 row))
+                        (= (deref (:sha1 h)) (:sha1 row))
+                        (= (deref (:crc32 h)) (:crc32 row))
+                        (= (deref (:l h)) (:l row))
+                   ))
+          (jdbc/execute!
+            db
+            ["UPDATE dl SET md5=?, sha1=?, crc32=?, l=? WHERE uri = ?"
+               (deref (:md5 h))
+               (deref (:sha1 h))
+               (deref (:crc32 h))
+               (deref (:l h))
+               (:uri row)
+            ]
+          )
+        )
+      )
+    )
+  )
+  (shutdown-agents)
+)
+
 (defn insert [cmd r]
   (let [body (:body r)
-        sha2_256 (future (DigestUtils/sha256Hex body))
-        sha1 (future (DigestUtils/sha1Hex body))
-        md5 (future (DigestUtils/md5Hex body))
-        crc32 (future (format "%08x" (.getValue (doto (CRC32.) (.update body)))))
-        l (future (count body))
+        h (hash/multi body)
         ]
     (jdbc/insert! db :dl
       {
@@ -31,14 +68,14 @@
         :status (:status r)
         :content_type (get-in r [:headers "Content-Type"])
         :encoding (get-in r [:headers "Content-Encoding"])
-        :sha2_256 (deref sha2_256)
-        :sha1 (deref sha1)
-        :md5 (deref md5)
-        :crc32 (deref crc32)
+        :sha2_256 (deref (:sha2_256 h))
+        :sha1 (deref (:sha1 h))
+        :md5 (deref (:md5 h))
+        :crc32 (deref (:crc32 h))
         :content body
         :comment (.getOptionValue cmd "comment")
         :j (.getOptionValue cmd "json")
-        :l (deref l)
+        :l (deref (:l h))
       }
     )
     (shutdown-agents)
@@ -80,6 +117,7 @@
   (let [
        options (doto (Options.)
                   (.addOption "extract" true "Extract to file")
+                  (.addOption "fsck" false "Check/repair")
                   (.addOption "import" true "Import from a file")
                   (.addOption "referrer" true "Referring web page")
                   (.addOption "uri" true "URI to download")
@@ -92,31 +130,33 @@
        cmd (.parse parser options argv)
      ]
     (assert (empty? (.getArgList cmd)))
-    (if (.hasOption cmd "extract")
-      (extract cmd)
-    ;else
-      (insert cmd
-        (if (.hasOption cmd "import")
-          ; simulate request
-          {
-            :body (FileUtils/readFileToByteArray (File. (.getOptionValue cmd "import")))
-            :request {
-              :http-url (.getOptionValue cmd "uri")
-              :headers { "Referer" (.getOptionValue cmd "referrer") }
+    (cond
+      (.hasOption cmd "extract")
+        (extract cmd)
+      (.hasOption cmd "fsck")
+        (fsck cmd)
+      :else
+        (insert cmd
+          (if (.hasOption cmd "import")
+            ; simulate request
+            {
+              :body (FileUtils/readFileToByteArray (File. (.getOptionValue cmd "import")))
+              :request {
+                :http-url (.getOptionValue cmd "uri")
+                :headers { "Referer" (.getOptionValue cmd "referrer") }
+              }
             }
-          }
-          ; else
-          (client/get (.getOptionValue cmd "uri") {
-            :as :byte-array
-            :headers {
-             :referer (.getOptionValue cmd "referrer")
-             :user-agent (System/getenv "OEI_USER_AGENT")
-            }
-            :save-request? true
-          })
+            ; else
+            (client/get (.getOptionValue cmd "uri") {
+              :as :byte-array
+              :headers {
+               :referer (.getOptionValue cmd "referrer")
+               :user-agent (System/getenv "OEI_USER_AGENT")
+              }
+              :save-request? true
+            })
+          )
         )
-
-      )
     )
   )
 )
