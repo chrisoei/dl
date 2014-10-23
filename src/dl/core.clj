@@ -102,6 +102,21 @@
           db
           ["SELECT content FROM dl WHERE uri = ?" (.getOptionValue cmd "uri")]
         )
+      (.hasOption cmd "sha1")
+        (jdbc/query
+          db
+          ["SELECT content FROM dl WHERE sha1 = ?" (.getOptionValue cmd "sha1")]
+        )
+      (.hasOption cmd "md5")
+        (jdbc/query
+          db
+          ["SELECT content FROM dl WHERE md5 = ?" (.getOptionValue cmd "md5")]
+        )
+      (.hasOption cmd "crc32")
+        (jdbc/query
+          db
+          ["SELECT content FROM dl WHERE crc32 = ?" (.getOptionValue cmd "crc32")]
+        )
       (.hasOption cmd "referrer")
         (jdbc/query
           db
@@ -122,6 +137,9 @@
                   (.addOption "referrer" true "Referring web page")
                   (.addOption "uri" true "URI to download")
                   (.addOption "sha256" true "SHA-2 (256-bit) hash of file to extract")
+                  (.addOption "sha1" true "SHA-1 hash of file to extract")
+                  (.addOption "md5" true "MD-5 hash of file to extract")
+                  (.addOption "crc32" true "CRC32 hash of file to extract")
                   (.addOption "comment" true "Comment")
                   (.addOption "json" true "Additional JSON")
                 )
