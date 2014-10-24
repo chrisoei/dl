@@ -82,6 +82,11 @@
       }
     )
     (shutdown-agents)
+    (println {
+      :status (:status r)
+      :content_type (get-in r [:headers "Content-Type"])
+      :l (deref (:l h))
+    })
   )
 )
 
