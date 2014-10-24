@@ -34,6 +34,7 @@
            h (hash/multi content)
           ]
         (println (:uri u))
+        (hash/deref-multi h)
         (assert (= (deref (:sha2_256 h)) (:sha2_256 row)))
         (when (not (and (= (deref (:sha3_256 h)) (:sha3_256 row))
                         (= (deref (:md5 h)) (:md5 row))
@@ -56,13 +57,13 @@
       )
     )
   )
-  (shutdown-agents)
 )
 
 (defn insert [cmd r]
   (let [body (:body r)
         h (hash/multi body)
         ]
+    (hash/deref-multi h)
     (jdbc/insert! db :dl
       {
         :uri (get-in r [:request :http-url])
@@ -81,7 +82,6 @@
         :l (deref (:l h))
       }
     )
-    (shutdown-agents)
     (println {
       :status (:status r)
       :content_type (get-in r [:headers "Content-Type"])

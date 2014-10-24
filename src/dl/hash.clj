@@ -22,3 +22,9 @@
     :sha3_256 (future (sha3-256 x))
   }
 )
+
+(defn deref-multi
+  [x]
+  (doseq [v (vals x)] (deref v))
+  (shutdown-agents)
+)
