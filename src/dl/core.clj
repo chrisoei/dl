@@ -26,14 +26,14 @@
       (let [
            recs (jdbc/query
                   db
-                  ["SELECT uri, sha2_256, sha3_256, sha1, md5, crc32, l, content FROM dl where uri = ?;"
+                  ["SELECT sha2_256, sha3_256, sha1, md5, crc32, l, content FROM dl where uri = ?;"
                     (:uri u)]
                 )
            row (first recs)
            content (:content row)
            h (hash/multi content)
           ]
-        (println (:uri row))
+        (println (:uri u))
         (assert (= (deref (:sha2_256 h)) (:sha2_256 row)))
         (when (not (and (= (deref (:sha3_256 h)) (:sha3_256 row))
                         (= (deref (:md5 h)) (:md5 row))
@@ -49,7 +49,7 @@
                (deref (:sha1 h))
                (deref (:crc32 h))
                (deref (:l h))
-               (:uri row)
+               (:uri u)
             ]
           )
         )
