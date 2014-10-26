@@ -6,6 +6,7 @@
 (import '(org.apache.commons.io FileUtils))
 
 (require '[clj-http.client :as client])
+(require '[clojure.data.json :as json])
 (require '[clojure.java.io :refer [file output-stream]])
 (require '[clojure.java.jdbc :as jdbc])
 (require '[dl.hash :as hash])
@@ -156,6 +157,9 @@
        cmd (.parse parser options argv)
      ]
     (assert (empty? (.getArgList cmd)))
+    (if (.hasOption cmd "json")
+      (json/read-str (.getOptionValue cmd "json"))
+    )
     (cond
       (.hasOption cmd "extract")
         (extract cmd)
