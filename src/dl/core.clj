@@ -87,9 +87,24 @@
       :status (:status r)
       :content_type (get-in r [:headers "Content-Type"])
       :l (deref (:l h))
+      :sha2_256 (deref (:sha2_256 h))
     })
   )
 )
+
+(def ^:private query-key
+  (memoize
+    (fn [cmd]
+      (let
+        [
+          query-keys '("sha2_256" "sha3_256" "sha1" "uri" "md5" "crc32" "referrer")
+        ]
+        (first (filter #(.hasOption cmd %) query-keys))
+      )
+    )
+  )
+)
+
 
 (defn- write-result [cmd result]
   (with-open [out (output-stream (file (.getOptionValue cmd "extract")))]
@@ -100,38 +115,11 @@
 (defn extract [cmd]
   (write-result
     cmd
-    (cond
-      (.hasOption cmd "sha256")
-        (jdbc/query
-          db
-          ["SELECT content FROM dl WHERE sha2_256 = ?" (.getOptionValue cmd "sha256")]
-        )
-      (.hasOption cmd "uri")
-        (jdbc/query
-          db
-          ["SELECT content FROM dl WHERE uri = ?" (.getOptionValue cmd "uri")]
-        )
-      (.hasOption cmd "sha1")
-        (jdbc/query
-          db
-          ["SELECT content FROM dl WHERE sha1 = ?" (.getOptionValue cmd "sha1")]
-        )
-      (.hasOption cmd "md5")
-        (jdbc/query
-          db
-          ["SELECT content FROM dl WHERE md5 = ?" (.getOptionValue cmd "md5")]
-        )
-      (.hasOption cmd "crc32")
-        (jdbc/query
-          db
-          ["SELECT content FROM dl WHERE crc32 = ?" (.getOptionValue cmd "crc32")]
-        )
-      (.hasOption cmd "referrer")
-        (jdbc/query
-          db
-          ["SELECT content FROM dl WHERE referrer = ?" (.getOptionValue cmd "referrer")]
-        )
-    )
+      (jdbc/query
+        db
+        [(str "SELECT content FROM dl WHERE " (query-key cmd) " = ?;")
+         (.getOptionValue cmd (query-key cmd))]
+      )
   )
 )
 
@@ -142,10 +130,12 @@
        options (doto (Options.)
                   (.addOption "extract" true "Extract to file")
                   (.addOption "fsck" false "Check/repair")
+                  (.addOption "get" false "Get from URI")
                   (.addOption "import" true "Import from a file")
                   (.addOption "referrer" true "Referring web page")
                   (.addOption "uri" true "URI to download")
-                  (.addOption "sha256" true "SHA-2 (256-bit) hash of file to extract")
+                  (.addOption "sha2_256" true "SHA-2 (256-bit) hash of file to extract")
+                  (.addOption "sha3_256" true "SHA-3 (256-bit) hash of file to extract")
                   (.addOption "sha1" true "SHA-1 hash of file to extract")
                   (.addOption "md5" true "MD-5 hash of file to extract")
                   (.addOption "crc32" true "CRC32 hash of file to extract")
@@ -165,28 +155,30 @@
         (extract cmd)
       (.hasOption cmd "fsck")
         (fsck cmd)
-      :else
+      (.hasOption cmd "get")
         (insert cmd
-          (if (.hasOption cmd "import")
-            ; simulate request
-            {
-              :body (FileUtils/readFileToByteArray (File. (.getOptionValue cmd "import")))
-              :request {
-                :http-url (.getOptionValue cmd "uri")
-                :headers { "Referer" (.getOptionValue cmd "referrer") }
-              }
+          (client/get (.getOptionValue cmd "uri") {
+            :as :byte-array
+            :headers {
+             :referer (.getOptionValue cmd "referrer")
+             :user-agent (System/getenv "OEI_USER_AGENT")
             }
-            ; else
-            (client/get (.getOptionValue cmd "uri") {
-              :as :byte-array
-              :headers {
-               :referer (.getOptionValue cmd "referrer")
-               :user-agent (System/getenv "OEI_USER_AGENT")
-              }
-              :save-request? true
-            })
-          )
+            :save-request? true
+          })
         )
+      (.hasOption cmd "import")
+        (insert cmd
+          ; simulate request
+          {
+            :body (FileUtils/readFileToByteArray (File. (.getOptionValue cmd "import")))
+            :request {
+              :http-url (.getOptionValue cmd "uri")
+              :headers { "Referer" (.getOptionValue cmd "referrer") }
+            }
+          }
+        )
+      :else
+        (println "No command given")
     )
   )
 )
