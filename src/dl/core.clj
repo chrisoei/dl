@@ -18,25 +18,24 @@
 
 (defn fsck
   [cmd]
-  (let [uris (jdbc/query
+  (let [shas (jdbc/query
             db
-            ["SELECT uri FROM dl;"]
+            ["SELECT sha2_256 FROM dl;"]
           )
        ]
-    (doseq [u uris]
+    (doseq [x shas]
       (let [
            recs (jdbc/query
                   db
-                  ["SELECT sha2_256, sha3_256, sha1, md5, crc32, l, content FROM dl where uri = ?;"
-                    (:uri u)]
+                  ["SELECT uri, sha3_256, sha1, md5, crc32, l, content FROM dl where sha2_256 = ?;"
+                    (:sha2_256 x)]
                 )
            row (first recs)
            content (:content row)
            h (hash/multi content)
           ]
-        (println (:uri u))
-        (hash/deref-multi h)
-        (assert (= (deref (:sha2_256 h)) (:sha2_256 row)))
+        (println (:uri row))
+        (assert (= (deref (:sha2_256 h)) (:sha2_256 x)))
         (when (not (and (= (deref (:sha3_256 h)) (:sha3_256 row))
                         (= (deref (:md5 h)) (:md5 row))
                         (= (deref (:sha1 h)) (:sha1 row))
@@ -45,19 +44,20 @@
                    ))
           (jdbc/execute!
             db
-            ["UPDATE dl SET sha3_256=?, md5=?, sha1=?, crc32=?, l=? WHERE uri = ?"
+            ["UPDATE dl SET sha3_256=?, md5=?, sha1=?, crc32=?, l=? WHERE sha2_256 = ?"
                (deref (:sha3_256 h))
                (deref (:md5 h))
                (deref (:sha1 h))
                (deref (:crc32 h))
                (deref (:l h))
-               (:uri u)
+               (:sha2_256 x)
             ]
           )
         )
       )
     )
   )
+  (shutdown-agents)
 )
 
 (defn insert [cmd r]
