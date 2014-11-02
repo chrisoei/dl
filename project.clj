@@ -1,4 +1,4 @@
-(defproject dl "3.1.0-SNAPSHOT"
+(defproject dl "3.1.0"
   :description "Download manager"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"

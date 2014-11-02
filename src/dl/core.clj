@@ -97,7 +97,7 @@
     (fn [cmd]
       (let
         [
-          query-keys '("sha2_256" "sha3_256" "sha1" "uri" "md5" "crc32" "referrer")
+          query-keys '("sha2_256" "sha3_256" "sha1" "uri" "md5" "crc32" "referrer" "l")
         ]
         (first (filter #(.hasOption cmd %) query-keys))
       )
@@ -166,6 +166,7 @@
                   (.addOption "sha1" true "SHA-1 hash of file to extract")
                   (.addOption "md5" true "MD-5 hash of file to extract")
                   (.addOption "crc32" true "CRC32 hash of file to extract")
+                  (.addOption "l" true "Length of file to extract")
                   (.addOption "comment" true "Comment")
                   (.addOption "json" true "Additional JSON")
                 )
