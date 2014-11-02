@@ -125,10 +125,13 @@
 
 (defn- display-row [x]
   (dissoc
-    (assoc
+    (if (:j x)
+      (assoc
+        x
+        :json
+        (json/read-str (:j x) :key-fn keyword)
+      )
       x
-      :json
-      (json/read-str (:j x) :key-fn keyword)
     )
     :j
   )
