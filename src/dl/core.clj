@@ -152,6 +152,32 @@
   )
 )
 
+(defn update [cmd]
+  (let [row (first (jdbc/query
+                  db
+                  [(str "SELECT uri, referrer, comment, j "
+                        "FROM dl WHERE " (query-key cmd) " = ?"
+                        "ORDER BY created_at DESC LIMIT 1;")
+                   (.getOptionValue cmd (query-key cmd))]))
+       ]
+    (jdbc/execute!
+      db
+      [(str "UPDATE dl SET "
+            "uri = ?, "
+            "referrer = ?, "
+            "comment = ?, "
+            "j = ? "
+            "WHERE " (query-key cmd) " = ?;")
+        (if (.hasOption cmd "uri") (.getOptionValue cmd "uri") (:uri row))
+        (if (.hasOption cmd "referrer") (.getOptionValue cmd "referrer") (:referrer row))
+        (if (.hasOption cmd "comment") (.getOptionValue cmd "comment") (:comment row))
+        (if (.hasOption cmd "json") (.getOptionValue cmd "json") (:j row))
+        (.getOptionValue cmd (query-key cmd))
+      ]
+    )
+  )
+)
+
 (defn -main
   "This program manages downloads in a SQLITE database."
   [& args]
@@ -162,6 +188,7 @@
                   (.addOption "fsck" false "Check/repair")
                   (.addOption "get" false "Get from URI")
                   (.addOption "import" true "Import from a file")
+                  (.addOption "update" false "Update metadata")
                   (.addOption "referrer" true "Referring web page")
                   (.addOption "uri" true "URI to download")
                   (.addOption "sha2_256" true "SHA-2 (256-bit) hash of file to extract")
@@ -188,6 +215,8 @@
         (extract cmd)
       (.hasOption cmd "fsck")
         (fsck cmd)
+      (.hasOption cmd "update")
+        (update cmd)
       (.hasOption cmd "import")
         (insert cmd
           ; simulate request
