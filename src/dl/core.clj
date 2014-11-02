@@ -123,11 +123,38 @@
   )
 )
 
+(defn- display-row [x]
+  (dissoc
+    (assoc
+      x
+      :json
+      (json/read-str (:j x) :key-fn keyword)
+    )
+    :j
+  )
+)
+
+(defn examine [cmd]
+  (let [rows (jdbc/query
+                  db
+                  [(str "SELECT sha2_256, sha3_256, sha1, md5, crc32, l, "
+                        "uri, referrer, status, content_type, encoding, "
+                        "compression, comment, j, created_at "
+                        "FROM dl WHERE "
+                        (query-key cmd) " = ?")
+                   (.getOptionValue cmd (query-key cmd))])
+         rs (mapv display-row rows)
+       ]
+    (println rs)
+  )
+)
+
 (defn -main
   "This program manages downloads in a SQLITE database."
   [& args]
   (let [
        options (doto (Options.)
+                  (.addOption "examine" false "Examine data")
                   (.addOption "extract" true "Extract to file")
                   (.addOption "fsck" false "Check/repair")
                   (.addOption "get" false "Get from URI")
@@ -151,6 +178,8 @@
       (json/read-str (.getOptionValue cmd "json"))
     )
     (cond
+      (.hasOption cmd "examine")
+        (examine cmd)
       (.hasOption cmd "extract")
         (extract cmd)
       (.hasOption cmd "fsck")
