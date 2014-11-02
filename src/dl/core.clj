@@ -188,17 +188,6 @@
         (extract cmd)
       (.hasOption cmd "fsck")
         (fsck cmd)
-      (.hasOption cmd "get")
-        (insert cmd
-          (client/get (.getOptionValue cmd "uri") {
-            :as :byte-array
-            :headers {
-             :referer (.getOptionValue cmd "referrer")
-             :user-agent (System/getenv "OEI_USER_AGENT")
-            }
-            :save-request? true
-          })
-        )
       (.hasOption cmd "import")
         (insert cmd
           ; simulate request
@@ -211,7 +200,21 @@
           }
         )
       :else
-        (println "No command given")
+        (do
+          (if (not (.hasOption cmd "get"))
+            (println "No command given. Defaulting to --get.")
+          )
+          (insert cmd
+            (client/get (.getOptionValue cmd "uri") {
+              :as :byte-array
+              :headers {
+               :referer (.getOptionValue cmd "referrer")
+               :user-agent (System/getenv "OEI_USER_AGENT")
+              }
+              :save-request? true
+            })
+          )
+        )
     )
   )
 )
