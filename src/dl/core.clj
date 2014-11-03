@@ -178,6 +178,19 @@
   )
 )
 
+(defn delete [cmd]
+  (println (str "Deleted "
+                (first
+                  (jdbc/execute!
+                  db
+                  [
+                    (str "DELETE FROM dl WHERE " (query-key cmd) " = ?;")
+                    (.getOptionValue cmd (query-key cmd))
+                  ]))
+           )
+  )
+)
+
 (defn -main
   "This program manages downloads in a SQLITE database."
   [& args]
@@ -185,6 +198,7 @@
        options (doto (Options.)
                   (.addOption "examine" false "Examine data")
                   (.addOption "extract" true "Extract to file")
+                  (.addOption "delete" false "Delete data")
                   (.addOption "fsck" false "Check/repair")
                   (.addOption "get" false "Get from URI")
                   (.addOption "import" true "Import from a file")
@@ -209,6 +223,8 @@
       (json/read-str (.getOptionValue cmd "json"))
     )
     (cond
+      (.hasOption cmd "delete")
+        (delete cmd)
       (.hasOption cmd "examine")
         (examine cmd)
       (.hasOption cmd "extract")
