@@ -160,20 +160,22 @@
                         "ORDER BY created_at DESC LIMIT 1;")
                    (.getOptionValue cmd (query-key cmd))]))
        ]
-    (jdbc/execute!
-      db
-      [(str "UPDATE dl SET "
-            "uri = ?, "
-            "referrer = ?, "
-            "comment = ?, "
-            "j = ? "
-            "WHERE " (query-key cmd) " = ?;")
-        (if (.hasOption cmd "uri") (.getOptionValue cmd "uri") (:uri row))
-        (if (.hasOption cmd "referrer") (.getOptionValue cmd "referrer") (:referrer row))
-        (if (.hasOption cmd "comment") (.getOptionValue cmd "comment") (:comment row))
-        (if (.hasOption cmd "json") (.getOptionValue cmd "json") (:j row))
-        (.getOptionValue cmd (query-key cmd))
-      ]
+    (println (str "Updated "
+      (first (jdbc/execute!
+        db
+        [(str "UPDATE dl SET "
+              "uri = ?, "
+              "referrer = ?, "
+              "comment = ?, "
+              "j = ? "
+              "WHERE " (query-key cmd) " = ?;")
+          (if (.hasOption cmd "uri") (.getOptionValue cmd "uri") (:uri row))
+          (if (.hasOption cmd "referrer") (.getOptionValue cmd "referrer") (:referrer row))
+          (if (.hasOption cmd "comment") (.getOptionValue cmd "comment") (:comment row))
+          (if (.hasOption cmd "json") (.getOptionValue cmd "json") (:j row))
+          (.getOptionValue cmd (query-key cmd))
+        ]
+      )))
     )
   )
 )
