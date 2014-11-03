@@ -65,30 +65,43 @@
         h (hash/multi body)
         ]
     (hash/deref-multi h)
-    (jdbc/insert! db :dl
-      {
-        :uri (get-in r [:request :http-url])
-        :referrer (get-in r [:request :headers "Referer"])
+    (try
+
+      (jdbc/insert! db :dl
+        {
+          :uri (get-in r [:request :http-url])
+          :referrer (get-in r [:request :headers "Referer"])
+          :status (:status r)
+          :content_type (get-in r [:headers "Content-Type"])
+          :encoding (get-in r [:headers "Content-Encoding"])
+          :sha2_256 (deref (:sha2_256 h))
+          :sha3_256 (deref (:sha3_256 h))
+          :sha1 (deref (:sha1 h))
+          :md5 (deref (:md5 h))
+          :crc32 (deref (:crc32 h))
+          :content body
+          :comment (.getOptionValue cmd "comment")
+          :j (.getOptionValue cmd "json")
+          :l (deref (:l h))
+        }
+      )
+      (println {
         :status (:status r)
         :content_type (get-in r [:headers "Content-Type"])
-        :encoding (get-in r [:headers "Content-Encoding"])
-        :sha2_256 (deref (:sha2_256 h))
-        :sha3_256 (deref (:sha3_256 h))
-        :sha1 (deref (:sha1 h))
-        :md5 (deref (:md5 h))
-        :crc32 (deref (:crc32 h))
-        :content body
-        :comment (.getOptionValue cmd "comment")
-        :j (.getOptionValue cmd "json")
         :l (deref (:l h))
-      }
+        :sha2_256 (deref (:sha2_256 h))
+      })
+
+      (catch java.sql.SQLException e
+        (println {
+          :sql_exception {
+            :code (.getErrorCode e)
+            :message (.getMessage e)
+          }
+          :sha2_256 (deref (:sha2_256 h))
+        })
+      )
     )
-    (println {
-      :status (:status r)
-      :content_type (get-in r [:headers "Content-Type"])
-      :l (deref (:l h))
-      :sha2_256 (deref (:sha2_256 h))
-    })
   )
 )
 
